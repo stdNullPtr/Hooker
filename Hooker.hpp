@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
 
-static_assert(sizeof(uintptr_t) == 8, "Size of uintptr_t is not 8 bytes");
+static_assert(sizeof(uintptr_t) == 8, "Is this a x64 build?");
 
 namespace Hooker
 {
