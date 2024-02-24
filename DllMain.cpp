@@ -12,26 +12,14 @@ DWORD WINAPI StartRoutine(LPVOID lpParam);
 BOOL WINAPI DllMain(
     HINSTANCE hinstDLL,  // handle to DLL module
     DWORD fdwReason,     // reason for calling function
-    LPVOID lpReserved)  // reserved
+    LPVOID lpReserved)
 {
     switch (fdwReason)
     {
     case DLL_PROCESS_ATTACH:
-        //(void)MessageBox(NULL, XorStr("DLL_PROCESS_ATTACH"), XorStr("Success"), MB_OK);
         CreateThread(NULL, NULL, StartRoutine, hinstDLL, NULL, NULL);
         break;
-
-    case DLL_THREAD_ATTACH:
-        //(void)MessageBox(NULL, XorStr("DLL_THREAD_ATTACH"), XorStr("Success"), MB_OK);
-        break;
-
-    case DLL_THREAD_DETACH:
-        //(void)MessageBox(NULL, XorStr("DLL_THREAD_DETACH"), XorStr("Success"), MB_OK);
-        break;
-
-    case DLL_PROCESS_DETACH:
-        //(void)MessageBox(NULL, XorStr("DLL_PROCESS_DETACH"), XorStr("Success"), MB_OK);
-        break;
+    default: break;
     }
     return TRUE;
 }
@@ -68,21 +56,21 @@ DWORD WINAPI StartRoutine(LPVOID lpParam)
 
     bool bHookWsaSend{ false };
 
-    const auto* pWsaSendFuncAddr{ (uintptr_t*)((uintptr_t)GetModuleHandle("WS2_32.dll") + 0x1F60) };
-    const auto* pLogShellcodeAddr{ (uintptr_t*)Hooker::WsaSend::LogShellcode };
-    const auto* pWsaSendRetAddr{ (uintptr_t*)((char*)pWsaSendFuncAddr + 0xF) };
-    void* pTrampolineBlock{ VirtualAlloc(nullptr, 0xFF, MEM_COMMIT, PAGE_EXECUTE_READWRITE) };
+    const auto* const pWsaSendToFuncAddr{ (uintptr_t*)((uintptr_t)GetModuleHandle("WS2_32.dll") + 0x2E7B0) };
+    const auto* const pLogShellcodeAddr{ (uintptr_t*)Hooker::LogShellcode };
+    const auto* const pWsaSendToRetAddr{ (uintptr_t*)((char*)pWsaSendToFuncAddr + 0xF) };
+    void* const pTrampolineBlock{ VirtualAlloc(nullptr, 0xFF, MEM_COMMIT, PAGE_EXECUTE_READWRITE) };
 
-    memcpy(&Hooker::WsaSend::trampolineShellcode[23], &pLogShellcodeAddr, sizeof(pLogShellcodeAddr));
-    memcpy(&Hooker::WsaSend::trampolineShellcode[sizeof(Hooker::WsaSend::trampolineShellcode) - 8], &pWsaSendRetAddr, sizeof(pWsaSendFuncAddr));
-    memcpy(pTrampolineBlock, Hooker::WsaSend::trampolineShellcode, sizeof(Hooker::WsaSend::trampolineShellcode));
-    memcpy(&Hooker::WsaSend::hookBytes[6], &pTrampolineBlock, sizeof(pTrampolineBlock));
+    memcpy(&Hooker::WsaSendTo::trampolineShellcode[24], &pLogShellcodeAddr, sizeof(pLogShellcodeAddr));
+    memcpy(&Hooker::WsaSendTo::trampolineShellcode[sizeof(Hooker::WsaSendTo::trampolineShellcode) - 8], &pWsaSendToRetAddr, sizeof(pWsaSendToFuncAddr));
+    memcpy(pTrampolineBlock, Hooker::WsaSendTo::trampolineShellcode, sizeof(Hooker::WsaSendTo::trampolineShellcode));
+    memcpy(&Hooker::WsaSendTo::hookBytes[6], &pTrampolineBlock, sizeof(pTrampolineBlock));
 
     std::cout << XorStr("Base addr: ") << std::hex << std::uppercase << lpParam << XorStr(" press INS to exit\n");
     std::cout << XorStr("Log Shellcode addr: ") << std::hex << std::uppercase << pLogShellcodeAddr << '\n';
     std::cout << XorStr("Trampoline Shellcode addr: ") << std::hex << std::uppercase << pTrampolineBlock << '\n';
-    std::cout << XorStr("WSASend addr: ") << std::hex << std::uppercase << pWsaSendFuncAddr << '\n';
-    std::cout << XorStr("WSASend ret addr: ") << std::hex << std::uppercase << pWsaSendRetAddr << '\n';
+    std::cout << XorStr("WSASend addr: ") << std::hex << std::uppercase << pWsaSendToFuncAddr << '\n';
+    std::cout << XorStr("WSASend ret addr: ") << std::hex << std::uppercase << pWsaSendToRetAddr << '\n';
     std::cout << "\n";
 
     while (!(GetAsyncKeyState(VK_INSERT) & 0x1))
@@ -95,11 +83,11 @@ DWORD WINAPI StartRoutine(LPVOID lpParam)
 
             if (bHookWsaSend)
             {
-                Hooker::WsaSend::Hook((void*)pWsaSendFuncAddr);
+                Hooker::WsaSendTo::Hook((void*)pWsaSendToFuncAddr);
             }
             else
             {
-                Hooker::WsaSend::UnHook((void*)pWsaSendFuncAddr);
+                Hooker::WsaSendTo::UnHook((void*)pWsaSendToFuncAddr);
             }
 
             Sleep(100);
@@ -109,7 +97,7 @@ DWORD WINAPI StartRoutine(LPVOID lpParam)
     }
 
     // TODO Hooker class that will unhook once it goes out of scope, and make its scope tighter around the while loop
-    Hooker::WsaSend::UnHook((void*)pWsaSendFuncAddr);
+    Hooker::WsaSendTo::UnHook((void*)pWsaSendToFuncAddr);
 
     if (!VirtualFree(pTrampolineBlock, 0, MEM_RELEASE))
     {
