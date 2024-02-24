@@ -5,16 +5,20 @@ static_assert(sizeof(uintptr_t) == 8, "Is this a x64 build?");
 
 namespace Hooker
 {
-    inline void LogShellcode(const LPWSABUF buf)
+    inline void LogShellcode(const LPWSABUF buf, const DWORD bufferCount)
     {
         if (!buf) return;
         if (!buf->buf) return;
 
-        for (size_t i{ 0 }; i < buf->len; i++)
+        for (DWORD currBuf{ 0 }; currBuf < bufferCount; currBuf++)
         {
-            printf("%02hhX ", buf->buf[i]);
+            printf("[%ld][%lu] ", currBuf, buf->len);
+            for (size_t i{ 0 }; i < buf->len; i++)
+            {
+                printf("%02hhX ", buf->buf[i]);
+            }
+            printf("\n\n");
         }
-        printf("\n\n");
     }
 
     namespace WsaSend
