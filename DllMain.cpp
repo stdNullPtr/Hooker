@@ -57,8 +57,6 @@ DWORD WINAPI StartRoutine(LPVOID lpParam)
 	(void)freopen_s(reinterpret_cast<FILE**>(stderr), XorStr("CONOUT$"), "w", stderr);
 	std::cout << XorStr("Console initialized!\n");
 
-	bool bHookWsaSend{ false };
-
 	const HMODULE hWs2Dll{ GetModuleHandle("WS2_32.dll") };
 	const FARPROC wsaSendToFuncAddr{ GetProcAddress(hWs2Dll, "WSASendTo") };
 
@@ -79,6 +77,7 @@ DWORD WINAPI StartRoutine(LPVOID lpParam)
 	std::cout << XorStr("WSASendTo() ret addr: ") << std::hex << std::uppercase << pWsaSendToRetAddr << '\n';
 	std::cout << "\n";
 
+	bool bHookWsaSend{ false };
 	while (!(GetAsyncKeyState(VK_INSERT) & 0x1))
 	{
 		if (GetAsyncKeyState(VK_F1) & 0x1)
@@ -89,13 +88,11 @@ DWORD WINAPI StartRoutine(LPVOID lpParam)
 
 			if (bHookWsaSend)
 			{
-				file.open("log.txt", std::ios::app);
 				Hooker::WsaSendTo::Hook((void*)pWsaSendToFuncAddr);
 			}
 			else
 			{
 				Hooker::WsaSendTo::UnHook((void*)pWsaSendToFuncAddr);
-				file.close();
 			}
 
 			Sleep(100);
